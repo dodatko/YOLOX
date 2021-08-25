@@ -148,47 +148,40 @@ class LacmusDetection(Dataset):
             "\n********************************************************************************\n"
             "You are using cached images in RAM to accelerate training.\n"
             "This requires large system RAM.\n"
-            "Make sure you have 60G+ RAM and 19G available disk space for training VOC.\n"
+            "Make sure you have 44G+ RAM and 19G available disk space for training Lacmus.\n"
             "********************************************************************************\n"
         )
-        max_h = self.img_size[0]
-        max_w = self.img_size[1]
-        cache_file = self.root + "/img_resized_cache_" + self.name + ".array"
-        if not os.path.exists(cache_file):
-            logger.info(
-                "Caching images for the frist time. This might take about 3 minutes for VOC"
-            )
-            self.imgs = np.memmap(
-                cache_file,
-                shape=(len(self.ids), max_h, max_w, 3),
-                dtype=np.uint8,
-                mode="w+",
-            )
-            from tqdm import tqdm
-            from multiprocessing.pool import ThreadPool
+        # max_h = self.img_size[0]
+        # max_w = self.img_size[1]
+        # cache_file = self.root + "/img_resized_cache_" + self.name + ".array"
+        logger.info("Caching images for the first time. This might take about 3 minutes for VOC")
+        self.imgs = []
+        # self.imgs = np.memmap(
+        #     cache_file,
+        #     shape=(len(self.ids), max_h, max_w, 3),
+        #     dtype=np.uint8,
+        #     mode="w+",
+        # )
+        from tqdm import tqdm
+        from multiprocessing.pool import ThreadPool
 
-            NUM_THREADs = min(8, os.cpu_count())
-            loaded_images = ThreadPool(NUM_THREADs).imap(
-                lambda x: self.load_resized_img(x),
-                range(len(self.annotations)),
-            )
-            pbar = tqdm(enumerate(loaded_images), total=len(self.annotations))
-            for k, out in pbar:
-                self.imgs[k][: out.shape[0], : out.shape[1], :] = out.copy()
-            self.imgs.flush()
-            pbar.close()
-        else:
-            logger.warning(
-                "You are using cached imgs! Make sure your dataset is not changed!!"
-            )
-
-        logger.info("Loading cached imgs...")
-        self.imgs = np.memmap(
-            cache_file,
-            shape=(len(self.ids), max_h, max_w, 3),
-            dtype=np.uint8,
-            mode="r+",
+        NUM_THREADs = min(8, os.cpu_count())
+        loaded_images = ThreadPool(NUM_THREADs).imap(
+            lambda x: self.load_image(x),
+            range(len(self.annotations)),
         )
+        logger.info("Loading images from disk...")
+        pbar = tqdm(enumerate(loaded_images), total=len(self.annotations))
+        for k, out in pbar:
+            self.imgs.append(out.copy())
+        pbar.close()
+
+        # self.imgs = np.memmap(
+        #     cache_file,
+        #     shape=(len(self.ids), max_h, max_w, 3),
+        #     dtype=np.uint8,
+        #     mode="r+",
+        # )
 
     def load_anno_from_ids(self, index):
         img_id = self.ids[index]
@@ -207,16 +200,17 @@ class LacmusDetection(Dataset):
     def load_anno(self, index):
         return self.annotations[index][0]
 
-    def load_resized_img(self, index):
-        img = self.load_image(index)
-        r = min(self.img_size[0] / img.shape[0], self.img_size[1] / img.shape[1])
-        resized_img = cv2.resize(
-            img,
-            (int(img.shape[1] * r), int(img.shape[0] * r)),
-            interpolation=cv2.INTER_LINEAR,
-        ).astype(np.uint8)
+    # def load_resized_img(self, index):
+    #     img = self.load_image(index)
+    #     r = min(self.img_size[0] / img.shape[0], self.img_size[1] / img.shape[1])
+    #     resized_img = cv2.resize(
+    #         img,
+    #         (int(img.shape[1] * r), int(img.shape[0] * r)),
+    #         interpolation=cv2.INTER_LINEAR,
+    #     ).astype(np.uint8)
+    #
+    #     return resized_img
 
-        return resized_img
 
     def load_image(self, index):
         # logger.debug(f"read image {index}")
