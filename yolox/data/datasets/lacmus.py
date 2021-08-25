@@ -51,6 +51,7 @@ class AnnotationTransform(object):
             a list containing lists of bounding boxes  [bbox coords, class name]
         """
         res = np.empty((0, 5))
+        cc = 0
         for obj in target.iter("object"):
             difficult = obj.find("difficult")
             if difficult is not None:
@@ -124,15 +125,15 @@ class LacmusDetection(Dataset):
         self._classes = VOC_CLASSES
         self.ids = list()
 
-        for (year, name) in image_sets:
+        for year, name in image_sets:
             self._year = year
             rootpath = os.path.join(self.root, year)
             for line in open(
                 os.path.join(rootpath, "ImageSets", "Main", name + ".txt")
             ):
-                self.ids.append((rootpath, line.strip()))
-        print("!!!!!!!!!!!!!!!!!", self.root, len(self.ids))
-        self.annotations = self._load_coco_annotations()
+                self.ids.append((rootpath, line.strip()))  # ids = [(path to file, stem), ()... ]
+        # logger.info(f'self.ids: {self.ids}\n')
+        self.annotations = self._load_coco_annotations(resize=False)
         self.imgs = None
         if cache:
             self._cache_images()
@@ -140,8 +141,8 @@ class LacmusDetection(Dataset):
     def __len__(self):
         return len(self.ids)
 
-    def _load_coco_annotations(self):
-        return [self.load_anno_from_ids(_ids) for _ids in range(len(self.ids))]
+    def _load_coco_annotations(self, resize=True):
+        return [self.load_anno_from_ids(_ids, resize=resize) for _ids in range(len(self.ids))]
 
     def _cache_images(self):
         logger.warning(
@@ -183,19 +184,19 @@ class LacmusDetection(Dataset):
         #     mode="r+",
         # )
 
-    def load_anno_from_ids(self, index):
+    def load_anno_from_ids(self, index, resize=True):
         img_id = self.ids[index]
         target = ET.parse(self._annopath % img_id).getroot()
 
         assert self.target_transform is not None
         res, img_info = self.target_transform(target)
         height, width = img_info
+        if resize:
+            r = min(self.img_size[0] / height, self.img_size[1] / width)
+            res[:, :4] *= r
+            img_info = (int(height * r), int(width * r))
 
-        r = min(self.img_size[0] / height, self.img_size[1] / width)
-        res[:, :4] *= r
-        resized_info = (int(height * r), int(width * r))
-
-        return (res, img_info, resized_info)
+        return (res, img_info, img_info)
 
     def load_anno(self, index):
         return self.annotations[index][0]

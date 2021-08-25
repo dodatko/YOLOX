@@ -33,4 +33,8 @@ if __name__ == '__main__':
 
     print('Dataset length: ', len(dataset))
     print(len(dataset.ids))
-    # print(dataset.annotations())
+    target, img_info, img_id = dataset.pull_item(1)[1:]
+    print(len(target), img_info, img_id)
+    print(target[0])
+    print(dataset.ids[:3])
+
