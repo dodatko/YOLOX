@@ -1,4 +1,5 @@
-from data.datasets.lacmus import *
+import os
+# from data.datasets.lacmus import *
 from yolox.data import get_yolox_datadir
 
 if __name__ == '__main__':
@@ -6,8 +7,8 @@ if __name__ == '__main__':
     # print(target_transform)
 
     from yolox.data import (
-
-        VOCDetection,
+        LacmusDetection,
+        # VOCDetection,
         TrainTransform,
         YoloBatchSampler,
         DataLoader,
