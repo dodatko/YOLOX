@@ -2,9 +2,8 @@
 # -*- coding:utf-8 -*-
 # Code are based on
 # https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
-# Copyright (c) Francisco Massa.
-# Copyright (c) Ellis Brown, Max deGroot.
-# Copyright (c) Megvii, Inc. and its affiliates.
+# ... and adapted for Lacmus Dataset Competition
+# Copyright (c) Slava Dodatko, Anahoret SL
 
 import os
 import os.path
@@ -18,11 +17,10 @@ import numpy as np
 from yolox.evaluators.voc_eval import voc_eval
 
 from .datasets_wrapper import Dataset
-from .voc_classes import VOC_CLASSES
-# VOC_CLASSES = (
-#     "Pedestrian",
-# )
 
+VOC_CLASSES = (
+    "Pedestrian",
+)
 
 class AnnotationTransform(object):
 
@@ -38,7 +36,7 @@ class AnnotationTransform(object):
         width (int): width
     """
 
-    def __init__(self, class_to_ind=None, keep_difficult=True):
+    def __init__(self, class_to_ind=None, keep_difficult=False):
         self.class_to_ind = class_to_ind or dict(
             zip(VOC_CLASSES, range(len(VOC_CLASSES)))
         )
@@ -67,7 +65,7 @@ class AnnotationTransform(object):
             pts = ["xmin", "ymin", "xmax", "ymax"]
             bndbox = []
             for i, pt in enumerate(pts):
-                cur_pt = int(bbox.find(pt).text) - 1
+                cur_pt = int(float(bbox.find(pt).text)) - 1
                 # scale height or width
                 # cur_pt = cur_pt / width if i % 2 == 0 else cur_pt / height
                 bndbox.append(cur_pt)
@@ -82,8 +80,7 @@ class AnnotationTransform(object):
 
         return res, img_info
 
-
-class VOCDetection(Dataset):
+class LacmusDetection(Dataset):
 
     """
     VOC Detection Dataset Object
@@ -91,7 +88,7 @@ class VOCDetection(Dataset):
     input is image, target is annotation
 
     Args:
-        root (string): filepath to VOCdevkit folder.
+        root (string): filepath to Lacmus folder.
         image_set (string): imageset to use (eg. 'train', 'val', 'test')
         transform (callable, optional): transformation to perform on the
             input image
@@ -99,17 +96,19 @@ class VOCDetection(Dataset):
             target `annotation`
             (eg: take in caption string, return tensor of word indices)
         dataset_name (string, optional): which dataset to load
-            (default: 'VOC2007')
+            (default: '2021')
     """
 
     def __init__(
         self,
         data_dir,
-        image_sets=[("2007", "trainval"), ("2012", "trainval")],
+        # image_sets=[("2021", "trainval"), ("2019", "trainval")],
+        image_sets=[("2021", "trainval")],
         img_size=(416, 416),
         preproc=None,
         target_transform=AnnotationTransform(),
-        dataset_name="VOC0712",
+        # dataset_name="VOC0712",
+        dataset_name="lacmus_ods",
         cache=False,
     ):
         super().__init__(img_size)
@@ -124,14 +123,15 @@ class VOCDetection(Dataset):
         # self._imgpath = os.path.join("%s", "JPEGImages", "%s.png")
         self._classes = VOC_CLASSES
         self.ids = list()
+
         for (year, name) in image_sets:
             self._year = year
-            rootpath = os.path.join(self.root, "VOC" + year)
+            rootpath = os.path.join(self.root, year)
             for line in open(
                 os.path.join(rootpath, "ImageSets", "Main", name + ".txt")
             ):
                 self.ids.append((rootpath, line.strip()))
-
+        print("!!!!!!!!!!!!!!!!!", self.root, len(self.ids))
         self.annotations = self._load_coco_annotations()
         self.imgs = None
         if cache:
@@ -284,7 +284,7 @@ class VOCDetection(Dataset):
 
     def _get_voc_results_file_template(self):
         filename = "comp4_det_test" + "_{:s}.txt"
-        filedir = os.path.join(self.root, "results", "VOC" + self._year, "Main")
+        filedir = os.path.join(self.root, "results", self._year, "Main")
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         path = os.path.join(filedir, filename)
@@ -316,12 +316,12 @@ class VOCDetection(Dataset):
                         )
 
     def _do_python_eval(self, output_dir="output", iou=0.5):
-        rootpath = os.path.join(self.root, "VOC" + self._year)
+        rootpath = os.path.join(self.root,  self._year)
         name = self.image_set[0][1]
         annopath = os.path.join(rootpath, "Annotations", "{:s}.xml")
         imagesetfile = os.path.join(rootpath, "ImageSets", "Main", name + ".txt")
         cachedir = os.path.join(
-            self.root, "annotations_cache", "VOC" + self._year, name
+            self.root, "annotations_cache", self._year, name
         )
         if not os.path.exists(cachedir):
             os.makedirs(cachedir)

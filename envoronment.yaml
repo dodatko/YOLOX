@@ -1,0 +1,14 @@
+# conda install pytorch torchvision cudatoolkit=11.1 -c pytorch -c nvidia
+# conda install python=3.8 numpy opencv loguru scikit-image tqdm Pillow  ninja tabulate tensorboard  -c conda-forge
+# conda install onnx -c conda-forge
+# conda install cython -c conda-forge
+# pip install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+
+name: yolox-new
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  -
+  - pip:
+    - 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
